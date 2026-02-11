@@ -1,0 +1,74 @@
+package com.example.auto_job_runner.dto;
+
+import com.example.auto_job_runner.enums.JobType;
+import com.example.auto_job_runner.enums.Status;
+
+import java.sql.Timestamp;
+
+public class CreateJobResponse {
+    private long id;
+    private String name;
+    private JobType jobType;
+    private String cronExpression;
+    private Status status;
+    private Timestamp createdAt;
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public JobType getJobType() {
+        return jobType;
+    }
+
+    public void setJobType(JobType jobType) {
+        this.jobType = jobType;
+    }
+
+    public String getCronExpression() {
+        return cronExpression;
+    }
+
+    public void setCronExpression(String cronExpression) {
+        this.cronExpression = cronExpression;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public CreateJobResponse(long id, String name, JobType jobType, String cronExpression, Status status, Timestamp createdAt) {
+        this.id = id;
+        this.name = name;
+        this.jobType = jobType;
+        this.cronExpression = cronExpression;
+        this.status = status;
+        this.createdAt = createdAt;
+    }
+  public CreateJobResponse(){
+
+  }
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+}
