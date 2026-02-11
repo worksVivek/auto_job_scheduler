@@ -25,7 +25,6 @@ public class JobController {
     @PostMapping("/jobs")
     public ResponseEntity<CreateJobResponse> saveJob(@RequestBody CreateJobRequest jobRequest){
         CreateJobResponse createdjob = jobService.createJob(jobRequest);
-        System.out.println(createdjob.getId() + " " + createdjob.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(createdjob);
 
 
