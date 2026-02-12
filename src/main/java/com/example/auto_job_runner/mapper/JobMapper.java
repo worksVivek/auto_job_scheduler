@@ -1,8 +1,8 @@
 package com.example.auto_job_runner.mapper;
 
 
-import com.example.auto_job_runner.dto.CreateJobRequest;
-import com.example.auto_job_runner.dto.CreateJobResponse;
+import com.example.auto_job_runner.dto.JobRequest;
+import com.example.auto_job_runner.dto.JobResponse;
 import com.example.auto_job_runner.entity.Job;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -15,8 +15,8 @@ public interface JobMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-   Job toEntity(CreateJobRequest request);
-    CreateJobResponse toResponse(Job job);
+   Job toEntity(JobRequest request);
+    JobResponse toResponse(Job job);
 
 
 }

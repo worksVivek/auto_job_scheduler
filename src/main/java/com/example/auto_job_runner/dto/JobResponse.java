@@ -5,7 +5,7 @@ import com.example.auto_job_runner.enums.Status;
 
 import java.sql.Timestamp;
 
-public class CreateJobResponse {
+public class JobResponse {
     private long id;
     private String name;
     private JobType jobType;
@@ -57,7 +57,7 @@ public class CreateJobResponse {
         return createdAt;
     }
 
-    public CreateJobResponse(long id, String name, JobType jobType, String cronExpression, Status status, Timestamp createdAt) {
+    public JobResponse(long id, String name, JobType jobType, String cronExpression, Status status, Timestamp createdAt) {
         this.id = id;
         this.name = name;
         this.jobType = jobType;
@@ -65,7 +65,7 @@ public class CreateJobResponse {
         this.status = status;
         this.createdAt = createdAt;
     }
-  public CreateJobResponse(){
+  public JobResponse(){
 
   }
     public void setCreatedAt(Timestamp createdAt) {
