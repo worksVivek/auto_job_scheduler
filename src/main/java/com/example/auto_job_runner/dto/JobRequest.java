@@ -4,7 +4,7 @@ import com.example.auto_job_runner.enums.JobType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public class CreateJobRequest {
+public class JobRequest {
 
     @NotBlank(message = "Name should not be blank")
     private String name;

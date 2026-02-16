@@ -1,9 +1,12 @@
 package com.example.auto_job_runner.entity;
 
+import com.example.auto_job_runner.enums.JobStatus;
 import com.example.auto_job_runner.enums.JobType;
 import com.example.auto_job_runner.enums.Status;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.sql.Timestamp;
 
@@ -35,6 +38,7 @@ public class Job {
         this.status = status;
     }
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private JobType jobType;
     private String cronExpression;
@@ -68,7 +72,17 @@ public class Job {
     }
 
     @Enumerated(EnumType.STRING)
+    private JobStatus jobStatus;
+
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private Status status;
+
+    @CreationTimestamp
+    @Column(updatable = false)
     private Timestamp createdAt;
 
+    @UpdateTimestamp
+    private Timestamp updatedAt;
 }
