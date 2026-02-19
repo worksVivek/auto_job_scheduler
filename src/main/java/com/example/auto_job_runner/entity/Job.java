@@ -2,7 +2,7 @@ package com.example.auto_job_runner.entity;
 
 import com.example.auto_job_runner.enums.JobStatus;
 import com.example.auto_job_runner.enums.JobType;
-import com.example.auto_job_runner.enums.Status;
+import com.example.auto_job_runner.enums.ExecutionStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -34,7 +34,7 @@ public class Job {
         this.cronExpression = cronExpression;
     }
 
-    public void setStatus(Status status) {
+    public void setStatus(ExecutionStatus status) {
         this.status = status;
     }
 
@@ -51,7 +51,7 @@ public class Job {
         return cronExpression;
     }
 
-    public Status getStatus() {
+    public ExecutionStatus getStatus() {
         return status;
     }
 
@@ -77,7 +77,7 @@ public class Job {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private Status status;
+    private ExecutionStatus status;
 
     @CreationTimestamp
     @Column(updatable = false)
