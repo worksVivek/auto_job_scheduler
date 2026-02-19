@@ -1,7 +1,7 @@
 package com.example.auto_job_runner.dto;
 
 import com.example.auto_job_runner.enums.JobType;
-import com.example.auto_job_runner.enums.Status;
+import com.example.auto_job_runner.enums.ExecutionStatus;
 
 import java.sql.Timestamp;
 
@@ -10,7 +10,7 @@ public class JobResponse {
     private String name;
     private JobType jobType;
     private String cronExpression;
-    private Status status;
+    private ExecutionStatus status;
     private Timestamp createdAt;
 
     public long getId() {
@@ -45,11 +45,11 @@ public class JobResponse {
         this.cronExpression = cronExpression;
     }
 
-    public Status getStatus() {
+    public ExecutionStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Status status) {
+    public void setStatus(ExecutionStatus status) {
         this.status = status;
     }
 
@@ -57,7 +57,7 @@ public class JobResponse {
         return createdAt;
     }
 
-    public JobResponse(long id, String name, JobType jobType, String cronExpression, Status status, Timestamp createdAt) {
+    public JobResponse(long id, String name, JobType jobType, String cronExpression, ExecutionStatus status, Timestamp createdAt) {
         this.id = id;
         this.name = name;
         this.jobType = jobType;

@@ -4,13 +4,11 @@ import com.example.auto_job_runner.dto.JobRequest;
 import com.example.auto_job_runner.dto.JobResponse;
 import com.example.auto_job_runner.entity.Job;
 import com.example.auto_job_runner.enums.JobStatus;
-import com.example.auto_job_runner.enums.Status;
+import com.example.auto_job_runner.enums.ExecutionStatus;
 import com.example.auto_job_runner.exception.ResourceNotFoundException;
 import com.example.auto_job_runner.mapper.JobMapper;
 import com.example.auto_job_runner.repository.JobRepository;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -29,7 +27,7 @@ public class JobService {
   }
     public JobResponse createJob(JobRequest request){
       Job job = jobMapper.toEntity(request);
-      job.setStatus(Status.CREATED);
+      job.setStatus(ExecutionStatus.CREATED);
       job.setJobStatus(JobStatus.INACTIVE);
       job.setCreatedAt(new Timestamp(System.currentTimeMillis()));
       Job savedJob = jobRepository.save(job);
