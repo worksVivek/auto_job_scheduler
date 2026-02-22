@@ -4,6 +4,10 @@ import com.example.auto_job_runner.entity.JobExecution;
 import com.example.auto_job_runner.enums.ExecutionStatus;
 import com.example.auto_job_runner.exception.ResourceNotFoundException;
 import com.example.auto_job_runner.repository.JobExecutionRepository;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +23,15 @@ public class JobAsyncExecutorService {
     private static final Logger logger = LoggerFactory.getLogger(JobAsyncExecutorService.class);
 
     private final JobExecutionRepository jobExecutionRepository;
+    private final Counter successCounter;
+    private final Counter failedCounter;
+    private final Timer executionTimer;
 
-    public JobAsyncExecutorService(JobExecutionRepository jobExecutionRepository) {
+    public JobAsyncExecutorService(JobExecutionRepository jobExecutionRepository, MeterRegistry meterRegistry) {
         this.jobExecutionRepository = jobExecutionRepository;
+        this.successCounter = meterRegistry.counter("job.executions.success");
+        this.failedCounter = meterRegistry.counter("job.executions.failed");
+        this.executionTimer = meterRegistry.timer("job.executions.duration");
     }
 
     @Async
@@ -48,22 +58,24 @@ public class JobAsyncExecutorService {
             Thread.sleep(3000);
 
             execution.setStatus(ExecutionStatus.SUCCESS);
-
+            successCounter.increment();
         } catch (InterruptedException e) {
 
             Thread.currentThread().interrupt();
             execution.setStatus(ExecutionStatus.FAILED);
+            failedCounter.increment();
             execution.setErrorMessage("Execution interrupted");
 
         } catch (Exception e) {
 
             execution.setStatus(ExecutionStatus.FAILED);
             execution.setErrorMessage(e.getMessage());
+            failedCounter.increment();
 
         } finally {
 
             long duration = System.currentTimeMillis() - startTime;
-
+            executionTimer.record(duration, java.util.concurrent.TimeUnit.MILLISECONDS);
             execution.setCompletedAt(new Timestamp(System.currentTimeMillis()));
 
             jobExecutionRepository.save(execution);

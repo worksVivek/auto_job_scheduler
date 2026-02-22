@@ -32,7 +32,7 @@ public class JobService {
       job.setCreatedAt(new Timestamp(System.currentTimeMillis()));
       Job savedJob = jobRepository.save(job);
 
-      return JobMapper.INSTANCE.toResponse(savedJob);
+      return jobMapper.toResponse(savedJob);
     }
     public List<JobResponse> getJobs(){
        List<Job> jobs = jobRepository.findAll();

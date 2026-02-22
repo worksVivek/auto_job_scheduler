@@ -16,5 +16,6 @@ public interface JobExecutionRepository extends JpaRepository<JobExecution, Long
 
     List<JobExecution> findByStatusAndCompletedAtIsNull(
             ExecutionStatus status);
+    long countByStatus(ExecutionStatus status);
 
 }

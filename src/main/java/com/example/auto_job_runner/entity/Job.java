@@ -74,6 +74,13 @@ public class Job {
     @Enumerated(EnumType.STRING)
     private JobStatus jobStatus;
 
+    public JobStatus getJobStatus() {
+        return jobStatus;
+    }
+
+    public void setJobStatus(JobStatus jobStatus) {
+        this.jobStatus = jobStatus;
+    }
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
