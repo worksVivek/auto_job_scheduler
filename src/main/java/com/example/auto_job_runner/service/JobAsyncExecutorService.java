@@ -4,7 +4,13 @@ import com.example.auto_job_runner.entity.JobExecution;
 import com.example.auto_job_runner.enums.ExecutionStatus;
 import com.example.auto_job_runner.exception.ResourceNotFoundException;
 import com.example.auto_job_runner.repository.JobExecutionRepository;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+
 import jakarta.transaction.Transactional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -12,6 +18,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class JobAsyncExecutorService {
@@ -19,9 +26,16 @@ public class JobAsyncExecutorService {
     private static final Logger logger = LoggerFactory.getLogger(JobAsyncExecutorService.class);
 
     private final JobExecutionRepository jobExecutionRepository;
+    private final Counter successCounter;
+    private final Counter failedCounter;
+    private final Timer executionTimer;
 
-    public JobAsyncExecutorService(JobExecutionRepository jobExecutionRepository) {
+    public JobAsyncExecutorService(JobExecutionRepository jobExecutionRepository,
+            MeterRegistry meterRegistry) {
         this.jobExecutionRepository = jobExecutionRepository;
+        this.successCounter = meterRegistry.counter("job.executions.success");
+        this.failedCounter = meterRegistry.counter("job.executions.failed");
+        this.executionTimer = meterRegistry.timer("job.executions.duration");
     }
 
     @Async
@@ -29,6 +43,7 @@ public class JobAsyncExecutorService {
     public void executeJob(Long executionId) {
 
         MDC.put("executionId", String.valueOf(executionId));
+
         long startTime = System.currentTimeMillis();
 
         JobExecution execution = jobExecutionRepository.findById(executionId)
@@ -36,46 +51,56 @@ public class JobAsyncExecutorService {
                         "Execution not found with id: " + executionId));
 
         try {
-            Long jobId = execution.getJob().getId();
-            MDC.put("jobId", String.valueOf(jobId));
+
+            MDC.put("jobId",
+                    String.valueOf(execution.getJob().getId()));
 
             logger.info("Execution started");
 
-            execution.setStatus(ExecutionStatus.RUNNING);
-            execution.setStartedAt(new Timestamp(startTime));
-
-            // 🔹 Simulate job logic
+            // -------------------------
+            // 🔹 Your real job logic here
+            // -------------------------
             Thread.sleep(3000);
+            // -------------------------
 
             execution.setStatus(ExecutionStatus.SUCCESS);
+            successCounter.increment();
 
         } catch (InterruptedException e) {
 
             Thread.currentThread().interrupt();
+
             execution.setStatus(ExecutionStatus.FAILED);
             execution.setErrorMessage("Execution interrupted");
+            failedCounter.increment();
 
         } catch (Exception e) {
 
             execution.setStatus(ExecutionStatus.FAILED);
             execution.setErrorMessage(e.getMessage());
+            failedCounter.increment();
 
         } finally {
 
             long duration = System.currentTimeMillis() - startTime;
 
-            execution.setCompletedAt(new Timestamp(System.currentTimeMillis()));
+            executionTimer.record(duration, TimeUnit.MILLISECONDS);
+
+            execution.setCompletedAt(
+                    new Timestamp(System.currentTimeMillis()));
 
             jobExecutionRepository.save(execution);
 
             if (execution.getStatus() == ExecutionStatus.SUCCESS) {
-                logger.info("Execution completed successfully in {} ms", duration);
+                logger.info("Execution completed successfully in {} ms",
+                        duration);
             } else {
-                logger.error("Execution failed after {} ms - {}", duration, execution.getErrorMessage());
+                logger.error("Execution failed after {} ms - {}",
+                        duration,
+                        execution.getErrorMessage());
             }
 
             MDC.clear();
         }
     }
-
 }

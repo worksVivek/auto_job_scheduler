@@ -1,5 +1,6 @@
 package com.example.auto_job_runner.service;
 
+import com.example.auto_job_runner.dto.JobExecutionResponse;
 import com.example.auto_job_runner.entity.Job;
 import com.example.auto_job_runner.entity.JobExecution;
 import com.example.auto_job_runner.enums.ExecutionStatus;
@@ -7,66 +8,120 @@ import com.example.auto_job_runner.exception.ResourceNotFoundException;
 import com.example.auto_job_runner.mapper.JobMapper;
 import com.example.auto_job_runner.repository.JobExecutionRepository;
 import com.example.auto_job_runner.repository.JobRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import com.example.auto_job_runner.dto.JobExecutionResponse;
-import org.springframework.stereotype.Service;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import java.sql.Timestamp;
 
 @Service
 public class JobExecutionService {
 
-    private final JobRepository jobRepository;
-    private final JobExecutionRepository jobExecutionRepository;
-    private final JobAsyncExecutorService jobAsyncExecutorService;
-    private final JobMapper jobMapper;
+        private static final Logger logger = LoggerFactory.getLogger(JobExecutionService.class);
 
-    private static final Logger logger = LoggerFactory.getLogger(JobExecutionService.class);
+        private final JobRepository jobRepository;
+        private final JobExecutionRepository jobExecutionRepository;
+        private final JobAsyncExecutorService jobAsyncExecutorService;
+        private final JobMapper jobMapper;
+        private final Counter executionTotalCounter;
 
-    public JobExecutionService(JobRepository jobRepository,
-            JobExecutionRepository jobExecutionRepository,
-            JobAsyncExecutorService jobAsyncExecutorService,
-            JobMapper jobMapper) {
-        this.jobRepository = jobRepository;
-        this.jobExecutionRepository = jobExecutionRepository;
-        this.jobAsyncExecutorService = jobAsyncExecutorService;
-        this.jobMapper = jobMapper;
-    }
+        public JobExecutionService(JobRepository jobRepository,
+                        JobExecutionRepository jobExecutionRepository,
+                        JobAsyncExecutorService jobAsyncExecutorService,
+                        JobMapper jobMapper,
+                        MeterRegistry meterRegistry) {
 
-    public Long triggerJob(Long jobId) {
-
-        // 1️⃣ Fetch job
-        Job job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Job not found with id: " + jobId));
-
-        // 2️⃣ Create execution record
-        JobExecution execution = new JobExecution();
-        execution.setJob(job);
-        execution.setStatus(ExecutionStatus.CREATED);
-        // 3️⃣ Save execution
-        JobExecution savedExecution = jobExecutionRepository.save(execution);
-
-        // 4️⃣ Trigger async execution
-        jobAsyncExecutorService.executeJob(savedExecution.getId());
-
-        // 5️⃣ Return execution ID
-        return savedExecution.getId();
-    }
-
-    public Page<JobExecutionResponse> getAllExecutions(Pageable pageable) {
-        Page<JobExecution> jobExecutions = jobExecutionRepository.findAll(pageable);
-        return jobExecutions.map(jobMapper::toExecutionResponse);
-    }
-
-    public Page<JobExecutionResponse> getExecutionsByJobId(Long jobId, Pageable pageable) {
-        if (!jobRepository.existsById(jobId)) {
-            throw new ResourceNotFoundException("Job not found with id: " + jobId);
+                this.jobRepository = jobRepository;
+                this.jobExecutionRepository = jobExecutionRepository;
+                this.jobAsyncExecutorService = jobAsyncExecutorService;
+                this.jobMapper = jobMapper;
+                this.executionTotalCounter = meterRegistry.counter("job.executions.total");
         }
-        Page<JobExecution> jobExecutions = jobExecutionRepository.findByJobId(jobId, pageable);
-        return jobExecutions.map(jobMapper::toExecutionResponse);
 
-    }
+        // =====================================================
+        // Trigger Job
+        // =====================================================
+        public Long triggerJob(Long jobId) {
 
+                boolean running = jobExecutionRepository
+                                .existsByJobIdAndStatus(jobId, ExecutionStatus.RUNNING);
+
+                if (running) {
+                        throw new IllegalStateException("Job is already running");
+                }
+
+                logger.info("Triggering job with id: {}", jobId);
+
+                Job job = jobRepository.findById(jobId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Job not found with id: " + jobId));
+
+                Timestamp now = new Timestamp(System.currentTimeMillis());
+
+                JobExecution execution = new JobExecution();
+                execution.setJob(job);
+                execution.setStatus(ExecutionStatus.RUNNING);
+                execution.setStartedAt(now);
+
+                JobExecution savedExecution = jobExecutionRepository.save(execution);
+
+                executionTotalCounter.increment();
+
+                logger.info("Execution {} started for job {}",
+                                savedExecution.getId(),
+                                jobId);
+
+                jobAsyncExecutorService
+                                .executeJob(savedExecution.getId());
+
+                return savedExecution.getId();
+        }
+
+        // =====================================================
+        // Get All Executions
+        // =====================================================
+        public Page<JobExecutionResponse> getAllExecutions(Pageable pageable) {
+
+                return jobExecutionRepository
+                                .findAll(pageable)
+                                .map(jobMapper::toExecutionResponse);
+        }
+
+        // =====================================================
+        // Get Executions By Job
+        // =====================================================
+        public Page<JobExecutionResponse> getExecutionsByJobId(
+                        Long jobId,
+                        Pageable pageable) {
+
+                if (!jobRepository.existsById(jobId)) {
+                        throw new ResourceNotFoundException(
+                                        "Job not found with id: " + jobId);
+                }
+
+                logger.info("Fetching executions for job {}", jobId);
+
+                return jobExecutionRepository
+                                .findByJobId(jobId, pageable)
+                                .map(jobMapper::toExecutionResponse);
+        }
+
+        // =====================================================
+        // Get Execution By Id
+        // =====================================================
+        public JobExecutionResponse getExecutionById(Long executionId) {
+
+                JobExecution execution = jobExecutionRepository.findById(executionId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Execution not found with id: "
+                                                                + executionId));
+
+                return jobMapper.toExecutionResponse(execution);
+        }
 }

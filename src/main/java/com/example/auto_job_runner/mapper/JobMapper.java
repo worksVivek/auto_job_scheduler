@@ -8,11 +8,9 @@ import com.example.auto_job_runner.entity.JobExecution;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
 
-@Mapper(componentModel = "Spring")
+@Mapper(componentModel = "spring")
 public interface JobMapper {
-    JobMapper INSTANCE = Mappers.getMapper(JobMapper.class);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
@@ -20,8 +18,6 @@ public interface JobMapper {
     Job toEntity(JobRequest request);
 
     JobResponse toResponse(Job job);
-
-    JobExecution toEntity(JobExecution jobExecution);
 
     @Mapping(source = "job.id", target = "jobId")
     @Mapping(source = "job.name", target = "jobName")
