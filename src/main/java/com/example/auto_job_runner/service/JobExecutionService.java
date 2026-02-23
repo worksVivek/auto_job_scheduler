@@ -1,5 +1,6 @@
 package com.example.auto_job_runner.service;
 
+import com.example.auto_job_runner.dto.JobExecutionResponse;
 import com.example.auto_job_runner.entity.Job;
 import com.example.auto_job_runner.entity.JobExecution;
 import com.example.auto_job_runner.enums.ExecutionStatus;
@@ -7,40 +8,40 @@ import com.example.auto_job_runner.exception.ResourceNotFoundException;
 import com.example.auto_job_runner.mapper.JobMapper;
 import com.example.auto_job_runner.repository.JobExecutionRepository;
 import com.example.auto_job_runner.repository.JobRepository;
+
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import com.example.auto_job_runner.dto.JobExecutionResponse;
-import org.springframework.stereotype.Service;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.micrometer.core.instrument.Counter;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 
 @Service
 public class JobExecutionService {
 
-        private final Counter executionTotalCounter;
+        private static final Logger logger = LoggerFactory.getLogger(JobExecutionService.class);
 
         private final JobRepository jobRepository;
         private final JobExecutionRepository jobExecutionRepository;
         private final JobAsyncExecutorService jobAsyncExecutorService;
         private final JobMapper jobMapper;
-
-        private static final Logger logger = LoggerFactory.getLogger(JobExecutionService.class);
+        private final Counter executionTotalCounter;
 
         public JobExecutionService(JobRepository jobRepository,
                         JobExecutionRepository jobExecutionRepository,
                         JobAsyncExecutorService jobAsyncExecutorService,
                         JobMapper jobMapper,
                         MeterRegistry meterRegistry) {
+
                 this.jobRepository = jobRepository;
                 this.jobExecutionRepository = jobExecutionRepository;
                 this.jobAsyncExecutorService = jobAsyncExecutorService;
                 this.jobMapper = jobMapper;
-                this.executionTotalCounter = meterRegistry
-                                .counter("job.executions.total");
+                this.executionTotalCounter = meterRegistry.counter("job.executions.total");
         }
 
         // =====================================================
@@ -48,24 +49,36 @@ public class JobExecutionService {
         // =====================================================
         public Long triggerJob(Long jobId) {
 
+                boolean running = jobExecutionRepository
+                                .existsByJobIdAndStatus(jobId, ExecutionStatus.RUNNING);
+
+                if (running) {
+                        throw new IllegalStateException("Job is already running");
+                }
+
                 logger.info("Triggering job with id: {}", jobId);
 
                 Job job = jobRepository.findById(jobId)
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Job not found with id: " + jobId));
 
+                Timestamp now = new Timestamp(System.currentTimeMillis());
+
                 JobExecution execution = new JobExecution();
                 execution.setJob(job);
-                execution.setStatus(ExecutionStatus.CREATED);
+                execution.setStatus(ExecutionStatus.RUNNING);
+                execution.setStartedAt(now);
 
                 JobExecution savedExecution = jobExecutionRepository.save(execution);
+
                 executionTotalCounter.increment();
 
-                logger.info("Execution {} created for job {}",
+                logger.info("Execution {} started for job {}",
                                 savedExecution.getId(),
                                 jobId);
 
-                jobAsyncExecutorService.executeJob(savedExecution.getId());
+                jobAsyncExecutorService
+                                .executeJob(savedExecution.getId());
 
                 return savedExecution.getId();
         }
@@ -75,7 +88,8 @@ public class JobExecutionService {
         // =====================================================
         public Page<JobExecutionResponse> getAllExecutions(Pageable pageable) {
 
-                return jobExecutionRepository.findAll(pageable)
+                return jobExecutionRepository
+                                .findAll(pageable)
                                 .map(jobMapper::toExecutionResponse);
         }
 
