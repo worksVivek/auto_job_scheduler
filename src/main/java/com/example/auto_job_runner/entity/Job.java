@@ -34,10 +34,6 @@ public class Job {
         this.cronExpression = cronExpression;
     }
 
-    public void setStatus(ExecutionStatus status) {
-        this.status = status;
-    }
-
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private JobType jobType;
@@ -49,10 +45,6 @@ public class Job {
 
     public String getCronExpression() {
         return cronExpression;
-    }
-
-    public ExecutionStatus getStatus() {
-        return status;
     }
 
     public Timestamp getCreatedAt() {
@@ -81,10 +73,6 @@ public class Job {
     public void setJobStatus(JobStatus jobStatus) {
         this.jobStatus = jobStatus;
     }
-
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private ExecutionStatus status;
 
     @CreationTimestamp
     @Column(updatable = false)

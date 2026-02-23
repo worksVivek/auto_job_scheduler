@@ -14,9 +14,13 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
 
@@ -47,40 +51,31 @@ public class JobExecutionService {
         // =====================================================
         // Trigger Job
         // =====================================================
+        @Transactional
         public Long triggerJob(Long jobId) {
-
-                boolean running = jobExecutionRepository
-                                .existsByJobIdAndStatus(jobId, ExecutionStatus.RUNNING);
-
-                if (running) {
-                        throw new IllegalStateException("Job is already running");
-                }
-
-                logger.info("Triggering job with id: {}", jobId);
 
                 Job job = jobRepository.findById(jobId)
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Job not found with id: " + jobId));
 
-                Timestamp now = new Timestamp(System.currentTimeMillis());
-
                 JobExecution execution = new JobExecution();
                 execution.setJob(job);
                 execution.setStatus(ExecutionStatus.RUNNING);
-                execution.setStartedAt(now);
+                execution.setStartedAt(new Timestamp(System.currentTimeMillis()));
 
-                JobExecution savedExecution = jobExecutionRepository.save(execution);
+                try {
+                        JobExecution savedExecution = jobExecutionRepository.save(execution);
+                        jobExecutionRepository.flush();
+                        executionTotalCounter.increment();
+                        jobAsyncExecutorService.executeJob(savedExecution.getId());
 
-                executionTotalCounter.increment();
+                        return savedExecution.getId();
 
-                logger.info("Execution {} started for job {}",
-                                savedExecution.getId(),
-                                jobId);
+                } catch (DataIntegrityViolationException ex) {
+                        logger.info("Job {} already running on another instance. Skipping.", jobId);
+                        return null;
 
-                jobAsyncExecutorService
-                                .executeJob(savedExecution.getId());
-
-                return savedExecution.getId();
+                }
         }
 
         // =====================================================

@@ -13,8 +13,9 @@ import org.mapstruct.Mapping;
 public interface JobMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "jobStatus", ignore = true)
     Job toEntity(JobRequest request);
 
     JobResponse toResponse(Job job);
@@ -22,5 +23,4 @@ public interface JobMapper {
     @Mapping(source = "job.id", target = "jobId")
     @Mapping(source = "job.name", target = "jobName")
     JobExecutionResponse toExecutionResponse(JobExecution execution);
-
 }

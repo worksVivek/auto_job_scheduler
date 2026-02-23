@@ -6,6 +6,7 @@ import com.example.auto_job_runner.service.JobExecutionService;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +28,12 @@ public class JobExecutionController {
     public ResponseEntity<ApiResponse<Long>> triggerJob(@PathVariable Long jobId) {
 
         Long executionId = jobExecutionService.triggerJob(jobId);
-
+        if (executionId == null) {
+            ApiResponse<Long> response = new ApiResponse<>(false,
+                    "Job is already running",
+                    null);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        }
         ApiResponse<Long> response = new ApiResponse<>(true,
                 "Job triggered successfully",
                 executionId);

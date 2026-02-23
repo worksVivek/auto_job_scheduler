@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
     // 4️⃣ Fallback → 500
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleException(Exception ex) {
-
+        ex.printStackTrace();
         ApiResponse<Object> response = new ApiResponse<>(false, "Something went wrong", null);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
