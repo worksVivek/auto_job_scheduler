@@ -58,7 +58,7 @@ public class JobService {
     }
     String oldCron = existingJob.getCronExpression();
     String newCron = request.getCronExpression();
-    validateCron(newCron);
+    validateCron(request.getCronExpression());
     existingJob.setName(request.getName());
     existingJob.setCronExpression(request.getCronExpression());
     existingJob.setJobType(request.getJobType());
@@ -85,7 +85,9 @@ public class JobService {
       throw new IllegalStateException("Job is already active");
     }
     job.setJobStatus(JobStatus.ACTIVE);
-    return jobMapper.toResponse(jobRepository.save(job));
+    Job savedJob = jobRepository.save(job);
+    schedulerService.registerJob(savedJob);
+    return jobMapper.toResponse(savedJob);
   }
 
   public JobResponse deactivateJob(long id) {
